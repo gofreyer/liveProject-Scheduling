@@ -35,6 +35,8 @@ namespace topological_sorting
 
         private void OpenCommand_Executed(object sender, ExecutedRoutedEventArgs e)
         {
+            unsortedListBox.Items.Clear();
+            sortedListBox.Items.Clear();
             try
             {
                 OpenFileDialog dialog = new OpenFileDialog();
@@ -45,7 +47,15 @@ namespace topological_sorting
                 bool? result = dialog.ShowDialog();
                 if (result == true)
                 {
-                    
+                    Sorter.LoadPoFile(dialog.FileName);
+
+                    if (Sorter.Tasks != null)
+                    {
+                        foreach (Task task in Sorter.Tasks)
+                        {
+                            unsortedListBox.Items.Add(task.ToString());
+                        }
+                    }
                 }
             }
             catch (Exception ex)
@@ -63,7 +73,18 @@ namespace topological_sorting
 
         private void sortButton_Click(object sender, RoutedEventArgs e)
         {
-            
+            Sorter.TopoSort();
+
+            sortedListBox.Items.Clear();
+
+            if (Sorter.SortedTasks != null)
+            {
+                foreach (Task task in Sorter.SortedTasks)
+                {
+                    sortedListBox.Items.Add(task.ToString());
+                }
+            }
+            Sorter.VerifySort();
         }
     }
 }
