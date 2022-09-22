@@ -37,6 +37,7 @@ namespace pert_charts
         {
             unsortedListBox.Items.Clear();
             sortedListBox.Items.Clear();
+            mainCanvas.Children.Clear();
             try
             {
                 OpenFileDialog dialog = new OpenFileDialog();
@@ -84,7 +85,11 @@ namespace pert_charts
                     sortedListBox.Items.Add(task.ToString());
                 }
             }
-            Sorter.VerifySort();
+
+            //Sorter.VerifySort();
+
+            Sorter.BuildPertChart();
+            Sorter.DrawPertChart(mainCanvas);
         }
     }
 }

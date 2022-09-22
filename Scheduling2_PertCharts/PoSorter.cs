@@ -5,6 +5,15 @@ using System.Text;
 
 using System.IO;
 using System.Windows;
+using static System.Net.Mime.MediaTypeNames;
+using System.Windows.Documents;
+using System.Windows.Interop;
+using System.Windows.Media.Effects;
+using System.Windows.Media.Media3D;
+using System.Windows.Media;
+using System.Windows.Shapes;
+using System.Xml.Linq;
+using System.Windows.Controls;
 
 namespace pert_charts
 {
@@ -12,10 +21,23 @@ namespace pert_charts
     {
         public List<Task> Tasks { get; set; }
         public List<Task> SortedTasks { get; set; }
+        public List<List<Task>> Columns { get; set; }
         public PoSorter()
         {
             Tasks = null;
             SortedTasks = null;
+            Columns = null;
+        }
+        public void PrepareTasks()
+        {
+            foreach (Task task in Tasks)
+            {
+                task.Init();
+            }
+            foreach (Task task in Tasks)
+            {
+                task.AddToFollowerLists();
+            }
         }
         public void TopoSort()
         {
@@ -25,14 +47,11 @@ namespace pert_charts
             }
             SortedTasks = new List<Task>();
             Queue<Task> readyTasks = new Queue<Task>();
+
+            PrepareTasks();
             
             foreach (Task task in Tasks)
             {
-                task.Init();
-            }
-            foreach (Task task in Tasks)
-            {
-                task.AddToFollowerLists();
                 if (task.PrereqCount == 0)
                 {
                     readyTasks.Enqueue(task);
@@ -53,7 +72,84 @@ namespace pert_charts
                 }
             }
         }
-        
+        public void BuildPertChart()
+        {
+            if (Tasks == null)
+            {
+                return;
+            }
+            SortedTasks = new List<Task>();
+            Queue<Task> readyTasks = new Queue<Task>();
+            Queue<Task> newReadyTasks = new Queue<Task>();
+
+            PrepareTasks();
+
+            foreach (Task task in Tasks)
+            {
+                if (task.PrereqCount == 0)
+                {
+                    readyTasks.Enqueue(task);
+                }
+            }
+
+            Columns = new List<List<Task>>();
+            List<Task> Column = new List<Task>();
+            Columns.Add(Column);
+            foreach (Task task in readyTasks)
+            {
+                Column.Add(task);
+            }
+
+            while (readyTasks.Count > 0)
+            {
+                Task readyTask = readyTasks.Dequeue();
+                SortedTasks.Add(readyTask);
+                foreach (Task task in readyTask.FollowerTasks)
+                {
+                    task.PrereqCount--;
+                    if (task.PrereqCount == 0)
+                    {
+                        newReadyTasks.Enqueue(task);
+                    }
+                }
+                if (readyTasks.Count == 0)
+                {
+                    if (newReadyTasks.Count > 0)
+                    {
+                        Column = new List<Task>();
+                        Columns.Add(Column);
+                        foreach (Task task in newReadyTasks)
+                        {
+                            Column.Add(task);
+                        }
+                    }
+                    readyTasks = newReadyTasks;
+                    newReadyTasks = new Queue<Task>();
+                }
+            }
+        }
+        public void DrawPertChart(Canvas _canvas)
+        {
+            _canvas.Children.Clear();
+
+            for (int col = 0; col < Columns.Count; col++)
+            {
+                for (int row = 0; row < Columns[col].Count; row++)
+                {
+                    Task task = Columns[col][row];
+                    task.SetBounds(col, row);
+                }
+            }
+
+            foreach (Task task in Tasks)
+            {
+                task.DrawLinesToPrereqs(_canvas);
+            }
+            foreach (Task task in Tasks)
+            {
+                task.DrawTaskBox(_canvas);
+            }
+        }
         public void VerifySort()
         {
             if (SortedTasks == null)
