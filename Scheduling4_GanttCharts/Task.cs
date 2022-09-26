@@ -127,6 +127,73 @@ namespace gantt_charts
             string label = $"Task: {Index.ToString()}\nDur: {Duration.ToString()}\nStart: {StartTime.ToString()}\nEnd: {EndTime.ToString()}";
             _canvas.DrawLabel(Bounds,label, Brushes.Transparent, labelColor, (HorizontalAlignment)1, (VerticalAlignment)1, FONT_SIZE, 0);
         }
+
+        public void DrawTaskGanttBox(Canvas _canvas, double _offset, int _margin, int _side)
+        {
+            Brush boxFill = Brushes.LightBlue;
+            Brush boxStroke = Brushes.Blue;
+            if (IsCritical)
+            {
+                boxFill = Brushes.Pink;
+                boxStroke = Brushes.Red;
+            }
+
+            double width = Duration == 0 ? 2 : Duration*_side;
+            double height = _side*0.5;
+            Rect Bounds = new Rect(
+                _offset + (StartTime+1) * _side,
+                _margin + (Index+1) * _side + 0.25*_side,
+                width,
+                height);
+
+            _canvas.DrawRectangle(Bounds, boxFill, boxStroke, 1);
+        }
+        public void DrawGanttLinesToPrereqs(Canvas _canvas, double _offset, int _margin, int _side, bool critical=true)
+        {
+            double lineWidth = 1;
+            Brush lineBrush = Brushes.Gray;
+            Point ptTo;
+            int counter = 0;
+            foreach (Task task in PrereqTasks)
+            {
+                double width = task.Duration == 0 ? 2 : task.Duration * _side;
+                if (task.Index < Index)
+                {
+                    // top
+                    ptTo = new Point(5+_offset + (StartTime + 1) * _side + 4 * counter, _margin + (Index + 1) * _side + 0.25 * _side);
+                }
+                else
+                {
+                    //bottom
+                    ptTo = new Point(5+_offset + (StartTime + 1) * _side + 4 * counter, _margin + (Index + 2) * _side - 0.25 * _side);
+                }
+                Point ptFrom = new Point(_offset + (task.StartTime + 1) * _side + width, _margin + (task.Index + 1.5) * _side);
+                Point ptVia = new Point(5 + _offset + (StartTime + 1) * _side + 4 * counter, _margin + (task.Index + 1.5) * _side);
+                lineWidth = 1;
+                lineBrush = Brushes.Gray;
+
+                if (task.EndTime == StartTime)
+                {
+                    lineWidth = 3;
+                    lineBrush = Brushes.Black;
+                }
+
+                if (IsCritical && task.EndTime == StartTime)
+                {
+                    lineBrush = Brushes.Red;
+                    lineWidth = 1.5;
+                }
+                if ( !(critical ^ IsCritical) )
+                {
+                    _canvas.DrawLine(ptFrom, ptVia, lineBrush, lineWidth);
+                    _canvas.DrawLine(ptVia, ptTo, lineBrush, lineWidth);
+                }
+                
+
+                counter++;
+            }
+        }
+
         public void SetTimes()
         {
             int maxEndTime = 0;
@@ -157,13 +224,3 @@ namespace gantt_charts
         }
     }
 }
-
-
-/*When drawing tasks:
-i. If the task is project critical, fill its rectangle with pink and draw its outline and text in red.
-ii. Else if the task is not project critical, fill its rectangle with light blue and draw its outline and text in black.
-iii. Draw the task’s index, duration, start time, and end time in its rectangle like this:
-Task 6
-Dur: 8
-Start: 25
-End: 33*/

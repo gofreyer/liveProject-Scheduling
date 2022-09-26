@@ -178,16 +178,20 @@ namespace gantt_charts
 
         public void DrawGanttChart(Canvas _canvas)
         {
+            FontFamily font = new FontFamily("Segoe UI");
+            
             const int MARGIN = 10;
             const int FONT_SIZE = 11;
-            const int LINEHEIGHT = FONT_SIZE + 10;
+            const int LINEHEIGHT = FONT_SIZE + 13;
             Brush labelColor = Brushes.Black;
-            Brush gridColor = Brushes.Gray;
+            Brush gridColor = Brushes.LightGray;
 
             _canvas.Children.Clear();
 
-            string label = "";
+            Label label;
+            string taskName = "";
             double maxLength = 0;
+            Size size;
             Rect Bounds = new Rect(0,0,0,0);
             int colStartTime = int.MaxValue;
             int colEndTime = 0;
@@ -195,28 +199,37 @@ namespace gantt_charts
             // Get TextSize and ColumnsCount
             for (int row = 0; row < Tasks.Count; row++)
             {
-                label = $"{Tasks[row].Index.ToString()}. {Tasks[row].Name}";
-                if (label.Length * FONT_SIZE * 0.6 > maxLength)
+                taskName = $"{Tasks[row].Index.ToString()}. {Tasks[row].Name}";
+                size = PrintedSize(taskName, font, FONT_SIZE);
+                if (size.Width+MARGIN > maxLength)
                 {
-                    maxLength = label.Length * FONT_SIZE * 0.6;  
+                    maxLength = size.Width+MARGIN;
                 }
+                /*
+                if (taskName.Length * FONT_SIZE * 0.6 > maxLength)
+                {
+                    maxLength = taskName.Length * FONT_SIZE * 0.6;  
+                }
+                */
                 if (Tasks[row].StartTime < colStartTime) colStartTime = Tasks[row].StartTime;
                 if (Tasks[row].EndTime > colEndTime) colEndTime = Tasks[row].EndTime;
             }
             // Draw TaskNames
             for (int row = 0; row < Tasks.Count; row++)
             {
-                label = $"{Tasks[row].Index.ToString()}. {Tasks[row].Name}";
+                taskName = $"{Tasks[row].Index.ToString()}. {Tasks[row].Name}";
                 
                 Bounds = new Rect(MARGIN, MARGIN + (row+1) * LINEHEIGHT, maxLength, LINEHEIGHT);
-                _canvas.DrawLabel(Bounds, label, Brushes.Transparent, labelColor, HorizontalAlignment.Left, VerticalAlignment.Center, FONT_SIZE, 0);
+                label = _canvas.DrawLabel(Bounds, taskName, Brushes.Transparent, labelColor, HorizontalAlignment.Left, VerticalAlignment.Center, FONT_SIZE, 0);
+                label.FontFamily = font;
                 //_canvas.DrawRectangle(Bounds, Brushes.Transparent, labelColor, 1);
             }
             // Draw ColumnHeaders
             for (int col = colStartTime; col <= colEndTime+1; col++)
             {
                 Bounds = new Rect(MARGIN+maxLength+(col-colStartTime)*LINEHEIGHT, MARGIN, LINEHEIGHT, LINEHEIGHT);
-                _canvas.DrawLabel(Bounds, col.ToString(), Brushes.Transparent, gridColor, HorizontalAlignment.Center, VerticalAlignment.Center, FONT_SIZE, 0);
+                label = _canvas.DrawLabel(Bounds, col.ToString(), Brushes.Transparent, labelColor, HorizontalAlignment.Center, VerticalAlignment.Center, FONT_SIZE, 0);
+                label.FontFamily = font;
                 //_canvas.DrawRectangle(Bounds, Brushes.Transparent, labelColor, 1);
             }
             //Draw Grid
@@ -230,33 +243,25 @@ namespace gantt_charts
                 _canvas.DrawLine(new Point(MARGIN + maxLength + (col - colStartTime ) * LINEHEIGHT, MARGIN),
                     new Point(MARGIN + maxLength + (col - colStartTime ) * LINEHEIGHT, MARGIN + (Tasks.Count+1) * LINEHEIGHT), gridColor, 1);
             }
-
-
-            /*
-            for (int col = 0; col < Columns.Count; col++)
-            {
-                for (int row = 0; row < Columns[col].Count; row++)
-                {
-                    Task task = Columns[col][row];
-                    task.SetBounds(col, row);
-                }
-            }
-
+            // Draw TaskBoxes
             foreach (Task task in Tasks)
             {
-                task.DrawLinesToPrereqs(_canvas);
+                task.DrawTaskGanttBox(_canvas,MARGIN+maxLength,MARGIN,LINEHEIGHT);
             }
-            double maxX = 0;
-            double maxY = 0;
+            // Draw TaskLines
             foreach (Task task in Tasks)
             {
-                task.DrawTaskBox(_canvas);
-                if (task.Bounds.Left + task.Bounds.Width + task.GetMargin() > maxX) maxX = task.Bounds.Left + task.Bounds.Width + task.GetMargin();
-                if (task.Bounds.Top + task.Bounds.Height + task.GetMargin() > maxY) maxY = task.Bounds.Top + task.Bounds.Height + task.GetMargin();
+                // first all non critical paths...
+                task.DrawGanttLinesToPrereqs(_canvas, MARGIN + maxLength, MARGIN, LINEHEIGHT,false);
             }
-            _canvas.Width = maxX;
-            _canvas.Height = maxY;
-            */
+            foreach (Task task in Tasks)
+            {
+                // ...then all critical paths
+                task.DrawGanttLinesToPrereqs(_canvas, MARGIN + maxLength, MARGIN, LINEHEIGHT, true);
+            }
+
+            _canvas.Width = 2*MARGIN + maxLength + LINEHEIGHT * (colEndTime - colStartTime + 2);
+            _canvas.Height = 2 * MARGIN + (Tasks.Count + 1) * LINEHEIGHT;
         }
         public void VerifySort()
         {
